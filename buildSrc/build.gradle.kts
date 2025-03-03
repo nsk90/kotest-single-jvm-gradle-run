@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.junit.platform:junit-platform-launcher:1.9.3")
-    implementation("io.kotest:kotest-runner-junit5-jvm:5.9.1")
+    //implementation("org.junit.platform:junit-platform-launcher:1.9.3")
+    //implementation("io.kotest:kotest-runner-junit5-jvm:5.9.1")
     // Add other dependencies needed by your task *here*
 }

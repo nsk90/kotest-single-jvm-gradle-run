@@ -60,11 +60,13 @@ dependencies {
 
     //testImplementation("org.junit.jupiter:junit-jupiter-engine:5.11.4")
 
-    testImplementation("io.kotest:kotest-runner-junit5-jvm:5.9.1") // Or your Kotest version
+    testImplementation("org.junit.platform:junit-platform-launcher:1.9.3") // to run tests fom jvm
+    testImplementation("io.kotest:kotest-runner-junit5-jvm:5.9.1")
     //androidTestImplementation(libs.androidx.junit)
     //androidTestImplementation(libs.androidx.espresso.core)
     //androidTestImplementation(platform(libs.androidx.compose.bom))
     //androidTestImplementation(libs.androidx.ui.test.junit4)
+
 
     //debugImplementation(libs.androidx.ui.tooling)
     //debugImplementation(libs.androidx.ui.test.manifest)
