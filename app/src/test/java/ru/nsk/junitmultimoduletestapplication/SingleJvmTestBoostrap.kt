@@ -11,24 +11,6 @@ import java.io.PrintWriter
 object SingleJvmTestBoostrap {
     @JvmStatic
     fun main(args: Array<String>) {
-        try {
-            val testClass = Class.forName("ru.nsk.junitmultimoduletestapplication.KotestExampleUnitTest")
-            println("1testClass $testClass")
-        } catch (e: Throwable) {
-            println("cant load class 1 KotestExampleUnitTest")
-        }
-
-        try {
-            val launcherFactory = this.javaClass.classLoader.loadClass("org.junit.platform.launcher.core.LauncherFactory")
-            println("launcherFactory's classLoader " + launcherFactory.classLoader)
-            println("URLClassLoader  " + this.javaClass.classLoader)
-            println("LauncherFactory  " + LauncherFactory::class.java.classLoader)
-        } catch (e: Throwable) {
-            println("cant load class  LauncherFactory")
-            throw e
-        }
-
-
         val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
             .selectors(
                 //*selectClasspathRoots(testClasses.map { Paths.get(it) }.toSet()).toTypedArray(),
@@ -54,9 +36,9 @@ object SingleJvmTestBoostrap {
 
         // Print test summary
         val summary = listener.summary
-        val writer = PrintWriter(System.out)
-        summary.printTo(writer)
-        writer.flush()
+        PrintWriter(System.out).use {
+            summary.printTo(it)
+        }
 
         //   Fail the task if there are test failures
         if (summary.totalFailureCount > 0) {

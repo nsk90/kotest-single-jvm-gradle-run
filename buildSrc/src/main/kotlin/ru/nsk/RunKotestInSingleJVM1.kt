@@ -47,4 +47,19 @@ fun Project.registerRunKotestTask() {
         kotestClasspath.from(project(":app").configurations.getByName("debugUnitTestRuntimeClasspath")) // fixme testRuntimeClasspath for java-library module
       //  dependsOn("testClasses")
     }
+
+    // Set up dependencies on subprojects' test compilation tasks
+    allprojects { // Iterate through all subprojects
+        afterEvaluate { // Important: Defer evaluation until after the subproject is configured
+            tasks.whenTaskAdded { //when a task added to the subproject. this avoids problems is a task does not exist
+                val task = this
+                if (task.name == "testClasses") { // For Java/Kotlin modules
+                    dependsOn(task) //root's task depends on the subproject's task.
+                } else if (task.name.startsWith("test") && task.name.endsWith("UnitTest")) { // For Android modules
+                    dependsOn(task)
+                }
+            }
+        }
+    }
 }
+

@@ -17,6 +17,6 @@ class ExampleUnitTest {
 
     @Test
     fun one() {
-       // throw Exception("asdf ")
+       throw Exception("asdf ")
     }
 }
