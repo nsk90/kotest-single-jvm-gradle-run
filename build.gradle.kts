@@ -18,7 +18,7 @@ plugins {
     //alias(libs.plugins.kotlin.compose) apply false
 }
 
-registerRunKotestTask()
+registerRunKotestTask(rootProject)
 
 
 //tasks.register("runAllTestsInSingleJVM") {
