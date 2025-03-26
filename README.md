@@ -8,4 +8,4 @@ Android Activity mock is initialised for more than a second!) as bytecode genera
 Only first mock operation of a class is so long, all futher mocks are created very fast, (mockking library caches class mocking information internally).
 
 This performance impact might be so big that it is much faster to run all test in 1 thread but with mocks cache then use default gradles parrallel strategy. 
-Gradle parallels executon of tests per module (it treats tham as a separate tasks and just uses its parallel task execution feature).
+Gradle parallels executon of tests per module (it treats them as a separate tasks and just uses its parallel task execution feature).
