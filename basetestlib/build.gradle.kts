@@ -12,10 +12,8 @@ kotlin {
     }
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
-}
 dependencies {
-    testImplementation(project(":basetestlib"))
-    testImplementation("io.kotest:kotest-runner-junit5-jvm:5.9.1")
+    implementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
+    implementation("org.junit.platform:junit-platform-launcher:1.11.4") // to run tests fom jvm
+    implementation("io.kotest:kotest-runner-junit5-jvm:5.9.1")
 }

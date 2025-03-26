@@ -1,4 +1,4 @@
-package ru.nsk.junitmultimoduletestapplication
+package ru.nsk.basetestlib
 
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
@@ -38,7 +38,7 @@ object SingleJvmTestBoostrap {
 
         //   Fail the task if there are test failures
         if (summary.totalFailureCount > 0) {
-            println("There were test failures.")
+            error("There were test failures.")
         } else {
             println("Tests passed successfully.")
         }
