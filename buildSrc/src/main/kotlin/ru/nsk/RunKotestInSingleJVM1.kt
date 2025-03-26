@@ -3,6 +3,8 @@ package ru.nsk // You can use any package name you like
 import org.gradle.api.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.*
+import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.register //for gradle 8.x
 
 abstract class RunKotestInSingleJVM1 : DefaultTask() { // Now a top-level class
@@ -16,7 +18,6 @@ abstract class RunKotestInSingleJVM1 : DefaultTask() { // Now a top-level class
     @TaskAction
     fun runTests() {
 
-        println("hello runTests")
 //            // Access the 'test' task of the 'app' module
 //            val testTask = project(":app").tasks.named("testDebugUnitTest", Test::class.java).get()
 //            testTask.testClassesDirs.map {
@@ -28,41 +29,50 @@ abstract class RunKotestInSingleJVM1 : DefaultTask() { // Now a top-level class
 //        println("testRuntimeClasspath   " + project.configurations.getByName("testRuntimeClasspath"))
 //
         project.javaexec {
-            classpath = project.files(
-                "/Users/nsk/projects/JunitMultimoduletestApplication/app/build/tmp/kotlin-classes/debugUnitTest/"
-            ) + kotestClasspath + testClassesDirs
-       //     mainClass.set("ru.nsk.junitmultimoduletestapplication.SingleJvmTestBoostrap") // our custom Boostrap class
-            mainClass.set("io.kotest.engine.launcher.MainKt") // use kotest Boostrap class
-            args("--reporter", "teamcity") // to produce output for IDE integration
+            classpath = kotestClasspath + testClassesDirs
+            // + project.files(
+                // "/Users/nsk/projects/JunitMultimoduletestApplication/app/build/tmp/kotlin-classes/debugUnitTest/"
+            //)
+            mainClass.set("ru.nsk.junitmultimoduletestapplication.SingleJvmTestBoostrap") // our custom Boostrap class
+            //     mainClass.set("io.kotest.engine.launcher.MainKt") // use kotest Boostrap class
+            //     args("--reporter", "teamcity") // to produce output for IDE integration
         }
     }
 }
 
 // Helper function to register the task (for cleaner build.gradle.kts)
 fun registerRunKotestTask(project: Project) {
-    val runKotestInSingleJvmTask = project.tasks.register<RunKotestInSingleJVM1>("runKotestInSingleJVM1") {
-        //sourceSets["test"].output.classesDirs
-        // println("configurations1: " + project(":app").configurations.joinToString { it.name })
-        // testClassesDirs.from(project(":app").sourceSets.getByName("test").output.classesDirs)
-        kotestClasspath.from(project.project(":app").configurations.getByName("debugUnitTestRuntimeClasspath")) // fixme testRuntimeClasspath for java-library module
-        //  dependsOn("testClasses")
-    }
+    val runKotestInSingleJvmTaskProvider = project.tasks.register<RunKotestInSingleJVM1>("runKotestInSingleJVM1")
+    //sourceSets["test"].output.classesDirs
 
-    // Set up dependencies on subprojects' test compilation tasks
-    project.subprojects { // Iterate through all subprojects
-        //afterEvaluate { // Important: Defer evaluation until after the subproject is configured
-        tasks.whenTaskAdded { //when a task added to the subproject. this avoids problems is a task does not exist
-            val task = this
-            if (task.name == "testClasses" || // For Java/Kotlin modules
-                task.name == "compileDebugUnitTestKotlin" || // For Android modules
-                task.name == "compileReleaseUnitTestKotlin"  // fixme check all flavors
-            ) {
-                runKotestInSingleJvmTask.configure {
-                    dependsOn(task)
-                }
+    runKotestInSingleJvmTaskProvider.configure {
+        val runKotestInSingleJvmTask = this
+
+        // Set up dependencies on subprojects' test compilation tasks
+        project.subprojects {
+            val subproject = this
+            if (subproject.extensions.findByName("android") != null) {
+                println("android module detected")
+
+                val variant = "debug" // Assuming debug variant
+                val classPath = subproject.configurations.getByName("${variant}UnitTestRuntimeClasspath")
+                runKotestInSingleJvmTask.kotestClasspath.from(classPath)
+
+                val compileTask = subproject.tasks.findByName("compile${variant.capitalized()}UnitTestKotlin") ?: error(
+                    "compile task not found"
+                )
+                runKotestInSingleJvmTask.testClassesDirs.from(compileTask.outputs.files) // only debugUnitTest is necessary
+                runKotestInSingleJvmTask.dependsOn(compileTask)
+            } else if (subproject.extensions.findByName("java") != null) {
+                println("java module detected")
+
+                val classPath = subproject.configurations.getByName("testRuntimeClasspath")
+                runKotestInSingleJvmTask.kotestClasspath.from(classPath)
+
+                val compileTask = subproject.tasks.findByName("testClasses") ?: error("compile task not found")
+                runKotestInSingleJvmTask.dependsOn(compileTask)
             }
         }
-        // }
     }
 }
 
