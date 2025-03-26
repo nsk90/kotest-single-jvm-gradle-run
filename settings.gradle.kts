@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Junit Multimoduletest Application"
 include(":app")
- 
+include(":myfeaturelibrary")
+include(":myjavafeaturelib")
