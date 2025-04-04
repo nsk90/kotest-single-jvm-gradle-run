@@ -4,26 +4,18 @@ import org.gradle.api.*
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.*
-// import org.gradle.kotlin.dsl.register
 import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.AppExtension
-import com.android.build.gradle.BaseExtension
 
 abstract class RunKotestTestsInSingleJvm : DefaultTask() {
 
     @get:InputFiles
-    abstract val rClassesDirs: ConfigurableFileCollection
-
-    @get:InputFiles
-    abstract val testClassesDirs: ConfigurableFileCollection
-
-    @get:InputFiles
-    abstract val kotestClasspath: ConfigurableFileCollection
+    abstract val testsClasspath: ConfigurableFileCollection
 
     @TaskAction
     fun runTests() {
         project.javaexec {
-            classpath = kotestClasspath + testClassesDirs + rClassesDirs
+            classpath = testsClasspath
             // it.mainClass.set("ru.nsk.basetestlib.SingleJvmTestBoostrap") // our custom Boostrap class
             mainClass.set("io.kotest.engine.launcher.MainKt") // use kotest Boostrap class
             // it.args("--reporter", "teamcity") // to produce output for IDE integration
@@ -39,31 +31,27 @@ fun registerRunKotestInSingleJvmTask(project: Project) {
         project.subprojects {
             val subproject = this
 
-            if (true || subproject.name == "baseapp") { // fixme remove, used for debug only
-
-                // myjavafeaturelib, app, myfeaturelibrary
-                if (subproject.plugins.hasPlugin("com.android.application")) {
-                    println("android app module detected $subproject")
-                    val androidExtension = subproject.extensions.getByType(AppExtension::class.java)
-                    setupAndroidModule(true, subproject, runKotestInSingleJvmTask, androidExtension)
-                } else if (subproject.plugins.hasPlugin("com.android.library")) {
-                    println("android library module detected $subproject")
-
-                    val androidExtension = subproject.extensions.getByType(LibraryExtension::class.java)
-                    setupAndroidModule(false, subproject, runKotestInSingleJvmTask, androidExtension)
-                } else if (subproject.plugins.hasPlugin("java-library")) {
-                    println("java module detected $subproject")
-
+            when {
+                subproject.plugins.hasPlugin("com.android.application") -> setupAndroidModule(
+                    AndroidModuleType.ANDROID_APPLICATION,
+                    subproject,
+                    runKotestInSingleJvmTask
+                )
+                subproject.plugins.hasPlugin("com.android.library") -> setupAndroidModule(
+                    AndroidModuleType.ANDROID_LIBRARY,
+                    subproject,
+                    runKotestInSingleJvmTask
+                )
+                subproject.plugins.hasPlugin("java-library") -> {
                     val classPath = subproject.configurations.getByName("testRuntimeClasspath")
-                    runKotestInSingleJvmTask.kotestClasspath.from(classPath)
+                    runKotestInSingleJvmTask.testsClasspath.from(classPath)
 
                     val compileTask = subproject.tasks.findByName("compileTestKotlin")
                         ?: error("compile task not found")
-                    runKotestInSingleJvmTask.testClassesDirs.from(compileTask.outputs.files)
+                    runKotestInSingleJvmTask.testsClasspath.from(compileTask.outputs.files)
                     runKotestInSingleJvmTask.dependsOn(compileTask)
-                } else {
-                    println("!!! Unknown module type detected ${subproject.name}")
                 }
+                else -> error("Unknown module type detected ${subproject.name}")
             }
         }
     }
@@ -74,12 +62,21 @@ private const val VARIANT_CAPITALIZED = "Debug"
 private const val FLAVOUR = "development"
 private const val FLAVOUR_CAPITALIZED = "Development"
 
+private enum class AndroidModuleType {
+    ANDROID_APPLICATION,
+    ANDROID_LIBRARY,
+}
+
 private fun setupAndroidModule(
-    isApp: Boolean,
+    androidModuleType: AndroidModuleType,
     subproject: Project,
     runKotestInSingleJvmTask: RunKotestTestsInSingleJvm,
-    androidExtension: BaseExtension,
 ) {
+    val androidExtension = when (androidModuleType) {
+        AndroidModuleType.ANDROID_APPLICATION -> subproject.extensions.getByType(AppExtension::class.java)
+        AndroidModuleType.ANDROID_LIBRARY -> subproject.extensions.getByType(LibraryExtension::class.java)
+    }
+
     val (taskNameEntry, taskNameEntryCapitalized) =
         if (androidExtension.productFlavors.names.contains(FLAVOUR)) {
             "$FLAVOUR$VARIANT_CAPITALIZED" to "$FLAVOUR_CAPITALIZED$VARIANT_CAPITALIZED"
@@ -89,7 +86,7 @@ private fun setupAndroidModule(
 
     val classPath = subproject.configurations.getByName("${taskNameEntry}UnitTestRuntimeClasspath")
     // to fix ambitious resolution error we need specify artifact type explicitly
-    runKotestInSingleJvmTask.kotestClasspath.from(classPath.incoming.artifactView {
+    runKotestInSingleJvmTask.testsClasspath.from(classPath.incoming.artifactView {
         attributes {
             val attributeContainer = this
             attributeContainer.attribute(
@@ -102,51 +99,15 @@ private fun setupAndroidModule(
     val compileTask = subproject.tasks.findByName("compile${taskNameEntryCapitalized}UnitTestKotlin")
         ?: error("compile task not found")
 
-//    subproject.tasks.all {
-//        if (isApp) {
-//
-//            try {
-//                println("app ${name} inputs: \n" + inputs.files.joinToString(separator = "\n") { it.path })
-//            } catch (e: Exception) {
-//                println("app ${name} inputs: not readable")
-//            }
-//
-//            try {
-//                println("app ${name} outputs: \n" + outputs.files.joinToString(separator = "\n") { it.path })
-//            } catch (e: Exception) {
-//                println("app ${name} outputs: not readable")
-//            }
-//        } else {
-//            try {
-//                println("library ${name} inputs: \n" + inputs.files.joinToString(separator = "\n") { it.path })
-//            } catch (e: Exception) {
-//                println("library ${name} inputs: not readable")
-//
-//            }
-//
-//            try {
-//                println("library ${name} outputs: \n" + outputs.files.joinToString(separator = "\n") { it.path })
-//            } catch (e: Exception) {
-//                println("library ${name} outputs: not readable")
-//            }
-//        }
-//    }
-
-    runKotestInSingleJvmTask.testClassesDirs.from(compileTask.outputs.files)
+    runKotestInSingleJvmTask.testsClasspath.from(compileTask.outputs.files)
     runKotestInSingleJvmTask.dependsOn(compileTask)
 
-
-    if (isApp) {
-        val resourcesTask = subproject.tasks.findByName("process${taskNameEntryCapitalized}Resources")
-            ?: error("resources task not found")
-
-        runKotestInSingleJvmTask.rClassesDirs.from(resourcesTask.outputs.files)
-        runKotestInSingleJvmTask.dependsOn(resourcesTask)
-    } else {
-        val resourcesTask = subproject.tasks.findByName("generate${taskNameEntryCapitalized}UnitTestStubRFile")
-            ?: error("resources task not found")
-
-        runKotestInSingleJvmTask.rClassesDirs.from(resourcesTask.outputs.files)
-        runKotestInSingleJvmTask.dependsOn(resourcesTask)
+    val resourcesTaskName = when (androidModuleType) {
+        AndroidModuleType.ANDROID_APPLICATION -> "process${taskNameEntryCapitalized}Resources"
+        AndroidModuleType.ANDROID_LIBRARY -> "generate${taskNameEntryCapitalized}UnitTestStubRFile"
     }
+    val resourcesTask = subproject.tasks.findByName(resourcesTaskName)
+        ?: error("resources task not found")
+    runKotestInSingleJvmTask.testsClasspath.from(resourcesTask.outputs.files)
+    runKotestInSingleJvmTask.dependsOn(resourcesTask)
 }
