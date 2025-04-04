@@ -143,6 +143,10 @@ private fun setupAndroidModule(
         runKotestInSingleJvmTask.rClassesDirs.from(resourcesTask.outputs.files)
         runKotestInSingleJvmTask.dependsOn(resourcesTask)
     } else {
+        val resourcesTask = subproject.tasks.findByName("generate${taskNameEntryCapitalized}UnitTestStubRFile")
+            ?: error("resources task not found")
 
+        runKotestInSingleJvmTask.rClassesDirs.from(resourcesTask.outputs.files)
+        runKotestInSingleJvmTask.dependsOn(resourcesTask)
     }
 }
