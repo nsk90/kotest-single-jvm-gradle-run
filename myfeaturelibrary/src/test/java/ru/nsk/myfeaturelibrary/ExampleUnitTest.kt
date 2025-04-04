@@ -16,6 +16,7 @@ class ExampleUnitTest : StringSpec({
     }
 
     "this is not" {
-        error( "ho ho ho")
+        //error( "ho ho ho")
+        //R.string.lib_name
     }
 })

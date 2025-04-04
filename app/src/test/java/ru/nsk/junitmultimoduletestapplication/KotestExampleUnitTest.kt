@@ -15,5 +15,6 @@ class KotestExampleUnitTest: StringSpec({
 
      "sdfdsd" {
          // error("asfffdf")
+         R.string.app_name
      }
 })
